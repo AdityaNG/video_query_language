@@ -1,0 +1,7 @@
+queries:
+  - query: "Is the bear visible?"
+    options: ["yes", "no"]
+  - query: "What is the color of the bear?"
+    options: ["white", "black", "red"]
+fps: 1.0
+tile_frames: [3, 3]

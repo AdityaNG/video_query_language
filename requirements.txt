@@ -1,0 +1,7 @@
+langchain[openai]
+langchain-community
+opencv-python
+pydantic
+PyYAML
+pillow
+numpy
