@@ -1,84 +1,87 @@
-# Video Perception
+# VQL: Video Query Language
 
-The script takes a video as input. Then it iterates through the video and tags each frame (at the specified FPS) with the answers to the queries in the YAML config. We use the factory method to generate the pydantic structures and make the structured LLM calls
+Searching through video data by asking the right questions.
 
+```mermaid
+graph TD
+    A[Input Video] --> D[Visual Analysis with LLM]
+    
+    E[default_config.yaml]
+    E --> D
+    
+    D --> F[Generate JSON Results]
+    
+    H[query.yaml] --> I[Query Processor]
+    F --> I
+    
+    I --> J[Find Matching Frames]
+    J --> M[Visualize Results]
+    
+    style A fill:#f9d77e
+    style E fill:#a8d5ba
+    style H fill:#a8d5ba
+    style F fill:#f9d77e
+    style M fill:#f9b57e
 ```
-python main.py --video results/video_full.mp4 --config default_config.yaml
-```
 
-`default_config.yaml`: structure
+# Example usage
+
+Here we will be running VQL on a forklift POV to assess its utilization. Say we want to catch the frequency at which the driver is not present at the forklift:
+
+
+| Frame | Timestamp | Image |
+|-------|-----------|-------|
+| 0423 | 409.31s | ![Frame 0423](media/forklift/frame_0423_409.31s.jpg) |
+| 0468 | 452.85s | ![Frame 0468](media/forklift/frame_0468_452.85s.jpg) |
+| 0693 | 670.57s | ![Frame 0693](media/forklift/frame_0693_670.57s.jpg) |
+
+`default_config.yaml`: Frame your list of queryies along with their options. Also specify other hyperparameters.
 ```
 queries:
-  - query: "Is the bear visible?"
+  - query: "Is the driver present in the forklift?"
     options: ["yes", "no"]
-  - query: "What is the color of the bear?"
-    options: ["white", "black", "red"]
+  - query: "Where is the forklift currently at?"
+    options: ["Truck", "Warehouse", "Charging"]
+  - query: "Is the forklift currently carrying cargo?"
+    options: ["yes", "no"]
+context: "You are viewing the POV from inside a forklift"
 fps: 1.0
 tile_frames: [3, 3]
+frame_stride: 9
+max_resolution: [640, 360]
 ```
 
-# Langchain structured outputs
-
+Once you have frames your queries, run the video pre-processing script
 ```
-import getpass
-import os
+python main.py --video results/forklift.mp4 --config default_config.yaml --display --save-frames
+```
 
-if not os.environ.get("OPENAI_API_KEY"):
-  os.environ["OPENAI_API_KEY"] = getpass.getpass("Enter API key for OpenAI: ")
+`query.yaml`: Then you may frame your specific query. For example, here we are looking for frames where the truck is being loaded OR the driver is absent from the forklift
+```
+queries:
+  - OR:
+    - AND:  # truck is being loaded
+      - query: "Is the driver present in the forklift?"
+        options: ["yes"]
+      - query: "Where is the forklift currently at?"
+        options: ["Truck"]
+      - query: "Is the forklift currently carrying cargo?"
+        options: ["yes"]
+    - AND:  # Driver is absent
+      - query: "Is the driver present in the forklift?"
+        options: ["no"]
+      - query: "Where is the forklift currently at?"
+        options: ["Truck", "Warehouse"]
+      - query: "Is the forklift currently carrying cargo?"
+        options: ["yes", "no"]
+```
 
-from langchain.chat_models import init_chat_model
+Finally, we can query the video with our VQL search query.
+```
+python query.py --video results/forklift.mp4 --config default_config.yaml --results results/output.json --query query.yaml
+```
 
-model = init_chat_model("gpt-4o-mini", model_provider="openai")
-
-model.invoke("Hello, world!")
-
-from typing import Optional
-
-from pydantic import BaseModel, Field
-
-
-# Pydantic
-class Joke(BaseModel):
-    """Joke to tell user."""
-
-    setup: str = Field(description="The setup of the joke")
-    punchline: str = Field(description="The punchline to the joke")
-    rating: Optional[int] = Field(
-        default=None, description="How funny the joke is, from 1 to 10"
-    )
-
-
-structured_llm = llm.with_structured_output(Joke)
-
-structured_llm.invoke("Tell me a joke about cats")
-# Joke(setup='Why was the cat sitting on the computer?', punchline='Because it wanted to keep an eye on the mouse!', rating=7)
-
-
-from typing import Optional
-
-from typing_extensions import Annotated, TypedDict
-
-
-# TypedDict
-class Joke(TypedDict):
-    """Joke to tell user."""
-
-    setup: Annotated[str, ..., "The setup of the joke"]
-
-    # Alternatively, we could have specified setup as:
-
-    # setup: str                    # no default, no description
-    # setup: Annotated[str, ...]    # no default, no description
-    # setup: Annotated[str, "foo"]  # default, no description
-
-    punchline: Annotated[str, ..., "The punchline of the joke"]
-    rating: Annotated[Optional[int], None, "How funny the joke is, from 1 to 10"]
-
-
-structured_llm = llm.with_structured_output(Joke)
-
-structured_llm.invoke("Tell me a joke about cats")
-# {'setup': 'Why was the cat sitting on the computer?',
- 'punchline': 'Because it wanted to keep an eye on the mouse!',
- 'rating': 7}
+First, download the demo video and place it at `results/forklift.mp4`
+```
+yt-dlp "https://www.youtube.com/watch?v=sRav4EuYFHM&t=493s&ab_channel=Vosty120" -f mp4
 ```

@@ -1,7 +1,12 @@
 queries:
-  - query: "Is the bear visible?"
+  - query: "Is the driver present in the forklift?"
     options: ["yes", "no"]
-  - query: "What is the color of the bear?"
-    options: ["white", "black", "red"]
+  - query: "Where is the forklift currently at?"
+    options: ["Truck", "Warehouse", "Charging"]
+  - query: "Is the forklift currently carrying cargo?"
+    options: ["yes", "no"]
+context: "You are viewing the POV from inside a forklift"
 fps: 1.0
 tile_frames: [3, 3]
+frame_stride: 9
+max_resolution: [640, 360]

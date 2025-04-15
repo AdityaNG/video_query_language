@@ -1,0 +1,16 @@
+queries:
+  - OR:
+    - AND:  # truck is being loaded
+      - query: "Is the driver present in the forklift?"
+        options: ["yes"]
+      - query: "Where is the forklift currently at?"
+        options: ["Truck"]
+      - query: "Is the forklift currently carrying cargo?"
+        options: ["yes"]
+    - AND:  # Driver is absent
+      - query: "Is the driver present in the forklift?"
+        options: ["no"]
+      - query: "Where is the forklift currently at?"
+        options: ["Truck", "Warehouse"]
+      - query: "Is the forklift currently carrying cargo?"
+        options: ["yes", "no"]

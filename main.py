@@ -5,7 +5,7 @@ import yaml
 import cv2
 import numpy as np
 from PIL import Image
-from typing import Dict, List, Any, Union, Optional
+from typing import Dict, List, Tuple, Any, Union, Optional
 import io
 from pydantic import BaseModel, Field, create_model
 from langchain_core.messages import HumanMessage
@@ -37,6 +37,8 @@ def load_config(config_path: str) -> Dict:
 def create_frame_model(config: Dict) -> BaseModel:
     """Create a Pydantic model dynamically based on the queries in the config."""
     field_definitions = {}
+
+    context: str = config.get('context', 'Answer the following')
     
     for query_item in config['queries']:
         query = query_item['query']
@@ -49,7 +51,7 @@ def create_frame_model(config: Dict) -> BaseModel:
         if options:
             field_definitions[field_name] = (
                 str, 
-                Field(description=f"{query} Choose from: {', '.join(options)}")
+                Field(description=f"Context: {context}; Query: {query}; Choose from: {', '.join(options)}")
             )
         else:
             field_definitions[field_name] = (
@@ -126,7 +128,11 @@ def image_model(inputs: dict) -> str | List[str] | Dict:
     return msg.content
 
 
-def extract_frames(video_path: str, fps: float) -> List[Dict[str, Any]]:
+def extract_frames(
+    video_path: str,
+    fps: float,
+    max_resolution: Tuple[int, int],
+) -> List[Dict[str, Any]]:
     """Extract frames from video at the specified FPS."""
     cap = cv2.VideoCapture(video_path)
     
@@ -146,6 +152,24 @@ def extract_frames(video_path: str, fps: float) -> List[Dict[str, Any]]:
             break
         
         if frame_count % frame_step == 0:
+            # Resize frame if it exceeds max_resolution
+            if frame is not None:
+                h, w = frame.shape[:2]
+                max_w, max_h = max_resolution
+                
+                # Calculate scale factor if resizing is needed
+                scale = 1.0
+                if w > max_w or h > max_h:
+                    scale_w = max_w / w
+                    scale_h = max_h / h
+                    # Take the smaller scale to ensure both dimensions fit within max_resolution
+                    scale = min(scale_w, scale_h)
+                
+                # Resize if necessary
+                if scale < 1.0:
+                    new_w, new_h = int(w * scale), int(h * scale)
+                    frame = cv2.resize(frame, (new_w, new_h), interpolation=cv2.INTER_AREA)
+            
             timestamp = frame_count / video_fps
             frames.append({"frame": frame, "timestamp": timestamp})
         
@@ -153,7 +177,6 @@ def extract_frames(video_path: str, fps: float) -> List[Dict[str, Any]]:
     
     cap.release()
     return frames
-
 
 def visualize_results(frame: np.ndarray, analysis: dict) -> np.ndarray:
     """Overlay analysis results on the frame."""
@@ -238,9 +261,21 @@ def main():
     
     # Create parser
     parser = JsonOutputParser(pydantic_object=FrameAnalysis)
+
+    # max_resolution
+    max_resolution: Tuple[int, int] = config.get(
+        'max_resolution', (640, 360)
+    )
     
     # Extract frames from video
-    frames = extract_frames(args.video, config.get('fps', 1.0))
+    frames = extract_frames(
+        args.video,
+        config.get('fps', 1.0),
+        max_resolution,
+    )
+
+    # Stride
+    frame_stride: int = config.get('frame_stride', 1)
     
     # Set up the vision chain
     load_frame_chain = TransformChain(
@@ -261,7 +296,8 @@ def main():
         if not os.path.exists(frames_dir):
             os.makedirs(frames_dir)
     
-    for i, frame_data in enumerate(frames):
+    for i in range(0,len(frames), frame_stride):
+        frame_data = frames[i]
         # Prepare inputs
         inputs = {
             'frame': frame_data['frame'],
