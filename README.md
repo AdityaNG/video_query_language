@@ -2,6 +2,15 @@
 
 Searching through video data by asking the right questions.
 
+Step 1: Enter your questions and upload your video. Say you want to analyze dashcam footage of your forklift. You want to know when your driver was in and out of the vehicle, when the forklift was carrying a payload and where the forklift has been.
+
+<img src="media/demo_1.gif">
+
+Step 2: Query the video for specific scenarios. Say you want to find all the sceanrios where: the forklift is carrying a paylaod AND when it is loading the truck.
+
+<img src="media/demo_2.gif">
+
+
 ```mermaid
 graph TD
     A[Input Video] --> D[Visual Analysis with LLM]

@@ -1,0 +1,42 @@
+/* Custom styles */
+.query-item {
+    background-color: #f8f9fa;
+}
+
+.condition-item {
+    background-color: #f8f9fa;
+}
+
+.nested-conditions {
+    margin-left: 20px;
+    border-left: 2px solid #dee2e6;
+    padding-left: 20px;
+}
+
+.frame-thumbnail {
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.frame-thumbnail:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.frame-thumbnail.active {
+    border: 3px solid #0d6efd;
+}
+
+#frame-gallery {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+/* Ensure the JSON viewer has scrollbars */
+pre.json-viewer {
+    max-height: 500px;
+    overflow: auto;
+    background-color: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.25rem;
+}
